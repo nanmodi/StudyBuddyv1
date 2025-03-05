@@ -2,13 +2,19 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import "./index.css";
 import App from "./App";
-import { PrivyProvider } from "@privy-io/react-auth";
+import { ClerkProvider } from "@clerk/clerk-react";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
+
+console.log(
+  "Clerk Publishable Key:",
+  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY
+);
+
 root.render(
   <React.StrictMode>
-    <PrivyProvider appId="cm6xq6ysp01ohqie3usbg58ii">
+    <ClerkProvider publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}>
       <App />
-    </PrivyProvider>
+    </ClerkProvider>
   </React.StrictMode>
 );

@@ -1,14 +1,17 @@
+// Login.jsx
 import React from "react";
-import { usePrivy } from "@privy-io/react-auth";
+import { SignIn } from "@clerk/clerk-react";
 
 const Login = () => {
-  const { login } = usePrivy();
-
   return (
     <div className="login-container">
-      <button onClick={login} className="login-button">
-        Log In
-      </button>
+      <SignIn
+        appearance={{
+          elements: {
+            footer: "hidden",
+          },
+        }}
+      />
     </div>
   );
 };

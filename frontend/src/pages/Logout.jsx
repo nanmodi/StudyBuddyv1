@@ -1,11 +1,11 @@
 import React from "react";
-import { usePrivy } from "@privy-io/react-auth";
+import { useAuth } from "@clerk/clerk-react"; // Import Clerk's useAuth hook
 
 const Logout = () => {
-  const { logout } = usePrivy();
+  const { signOut } = useAuth(); // Use Clerk's signOut function instead of logout
 
   return (
-    <button onClick={logout} className="logout-button">
+    <button onClick={signOut} className="logout-button">
       Log Out
     </button>
   );

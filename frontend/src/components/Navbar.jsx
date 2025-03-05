@@ -1,15 +1,17 @@
 import React from "react";
-import { usePrivy } from "@privy-io/react-auth";
+import { useAuth, UserButton } from "@clerk/clerk-react";
 
 const Navbar = () => {
-  const { logout, authenticated } = usePrivy();
+  const { isSignedIn, signOut } = useAuth();
 
-  if (!authenticated) return null;
+  if (!isSignedIn) return null;
 
   return (
     <nav className="navbar">
       <div className="nav-content">
-        <button onClick={logout} className="logout-button">
+        {/* Profile option via UserButton, no afterSignOutUrl needed */}
+        <UserButton />
+        <button onClick={signOut} className="logout-button">
           Log Out
         </button>
       </div>
