@@ -2,7 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const dotenv = require("dotenv");
-const { ClerkExpressWithAuth, clerkClient } = require("@clerk/clerk-sdk-node");
+const { ClerkExpressWithAuth } = require("@clerk/clerk-sdk-node");
 const { Webhook } = require("svix");
 
 dotenv.config();
@@ -16,8 +16,15 @@ app.use(
     origin: "http://localhost:5173", // Your frontend URL
   })
 );
-app.use(express.json());
-app.use(express.raw({ type: "application/json" })); // For webhook raw body parsing
+
+// Apply raw parsing BEFORE json parsing, but only for webhook route later
+app.use((req, res, next) => {
+  if (req.path === "/api/webhooks/clerk") {
+    express.raw({ type: "application/json" })(req, res, next);
+  } else {
+    express.json()(req, res, next);
+  }
+});
 
 // MongoDB Connection
 mongoose
@@ -25,12 +32,12 @@ mongoose
   .then(() => console.log("MongoDB connected"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
-// User Schema (Updated with clerkUserId)
+// User Schema
 const userSchema = new mongoose.Schema({
   name: String,
   email: { type: String, unique: true },
-  clerkUserId: String, // Added to sync with Clerk user ID
-  password: String, // Optional, as Clerk handles auth
+  clerkUserId: String,
+  password: String,
   createdAt: { type: Date, default: Date.now },
 });
 
@@ -38,9 +45,6 @@ const User = mongoose.model("User", userSchema);
 
 // API to save user
 app.post("/api/users", ClerkExpressWithAuth(), async (req, res) => {
-  const authHeader = req.headers.authorization;
-  console.log("Authorization Header:", authHeader);
-
   const { name, email } = req.body;
   console.log("Received user data from request body:", { name, email });
 
@@ -54,7 +58,7 @@ app.post("/api/users", ClerkExpressWithAuth(), async (req, res) => {
     const user = new User({
       name,
       email,
-      clerkUserId: req.auth.userId, // Store Clerk user ID
+      clerkUserId: req.auth.userId,
       password: "clerk-authenticated",
     });
     const savedUser = await user.save();
@@ -75,9 +79,6 @@ app.post("/api/webhooks/clerk", async (req, res) => {
     return res.status(500).json({ error: "Server configuration error" });
   }
 
-  console.log("Webhook raw body:", req.body.toString());
-  console.log("Webhook headers:", req.headers);
-
   const svix_id = req.headers["svix-id"];
   const svix_timestamp = req.headers["svix-timestamp"];
   const svix_signature = req.headers["svix-signature"];
@@ -88,37 +89,73 @@ app.post("/api/webhooks/clerk", async (req, res) => {
   }
 
   const webhook = new Webhook(WEBHOOK_SECRET);
-
+  let event;
   try {
-    const payload = webhook.verify(req.body, {
+    console.log("Raw body:", req.body.toString()); // Debug: Convert Buffer to string for readability
+    event = webhook.verify(req.body, {
       "svix-id": svix_id,
       "svix-timestamp": svix_timestamp,
       "svix-signature": svix_signature,
     });
-
-    console.log("Webhook payload:", payload);
-
-    if (payload.type === "user.deleted") {
-      const userId = payload.data.id;
-      console.log("User deleted event received for userId:", userId);
-
-      const deletedUser = await User.findOneAndDelete({ clerkUserId: userId });
-      if (!deletedUser) {
-        console.log("User not found in MongoDB for clerkUserId:", userId);
-      } else {
-        console.log("User deleted from MongoDB:", deletedUser);
-      }
-
-      return res
-        .status(200)
-        .json({ message: "Webhook processed successfully" });
-    }
-
-    res.status(200).json({ message: "Webhook received, no action taken" });
+    console.log("Webhook verified successfully:", event);
   } catch (error) {
-    console.error("Webhook verification error:", error);
+    console.error("Webhook verification failed:", error.message);
     return res.status(400).json({ error: "Invalid webhook signature" });
   }
+
+  switch (event.type) {
+    case "user.updated":
+      console.log("User updated event received:", event.data);
+      try {
+        const updatedUser = await User.findOneAndUpdate(
+          { clerkUserId: event.data.id },
+          {
+            name:
+              event.data.username ||
+              `${event.data.first_name} ${event.data.last_name}` ||
+              "Unknown",
+            email: event.data.email_addresses[0]?.email_address || "",
+          },
+          { new: true }
+        );
+        if (!updatedUser) {
+          console.log("User not found for update:", event.data.id);
+          return res.status(404).json({ error: "User not found" });
+        }
+        console.log("User updated in database:", updatedUser);
+        res.status(200).json({ message: "User updated successfully" });
+      } catch (error) {
+        console.error("Error updating user:", error);
+        res.status(500).json({ error: "Server error" });
+      }
+      break;
+
+    case "user.deleted":
+      console.log("User deleted event received:", event.data);
+      try {
+        const deletedUser = await User.findOneAndDelete({
+          clerkUserId: event.data.id,
+        });
+        if (!deletedUser) {
+          console.log("User not found for deletion:", event.data.id);
+          return res.status(404).json({ error: "User not found" });
+        }
+        console.log("User deleted from database:", deletedUser);
+        res.status(200).json({ message: "User deleted successfully" });
+      } catch (error) {
+        console.error("Error deleting user:", error);
+        res.status(500).json({ error: "Server error" });
+      }
+      break;
+
+    default:
+      console.log("Unhandled event type:", event.type);
+      res.status(200).json({ message: "Webhook received, no action taken" });
+  }
+});
+
+app.get("/", (req, res) => {
+  res.status(200).json({ message: "Server is running!" });
 });
 
 // Start server
