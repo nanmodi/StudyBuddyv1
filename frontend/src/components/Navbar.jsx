@@ -9,7 +9,6 @@ const Navbar = () => {
   return (
     <nav className="navbar">
       <div className="nav-content">
-        {/* Profile option via UserButton, no afterSignOutUrl needed */}
         <UserButton />
         <button onClick={signOut} className="logout-button">
           Log Out
