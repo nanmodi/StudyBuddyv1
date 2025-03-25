@@ -12,6 +12,8 @@ import Navbar from "./components/Navbar";
 import UploadDocuments from "./pages/UploadDocuments";
 import FileView from "./pages/FileView";
 import Aiapp from "./components/Aiapp";
+import PricingPlan from "./pages/PricingPlan";
+import Dashboard from "./pages/Dashboard";
 
 const App = () => {
   const { isSignedIn, user } = useUser();
@@ -76,10 +78,7 @@ const App = () => {
           path="/"
           element={isSignedIn ? <Navigate to="/landing" /> : <Login />}
         />
-        <Route
-          path="/landing"
-          element={isSignedIn ? <LandingPage /> : <Navigate to="/" />}
-        />
+        <Route path="/landing" element={<LandingPage />} />
         <Route
           path="/upload-documents"
           element={isSignedIn ? <UploadDocuments /> : <Navigate to="/" />}
@@ -89,6 +88,14 @@ const App = () => {
           element={isSignedIn ? <FileView /> : <Navigate to="/" />}
         />
         <Route path="/ai" element={<Aiapp />} />
+        <Route
+          path="/pricing"
+          element={isSignedIn ? <PricingPlan /> : <Navigate to="/" />}
+        />
+        <Route
+          path="/dashboard"
+          element={isSignedIn ? <Dashboard /> : <Navigate to="/" />}
+        />
       </Routes>
     </Router>
   );
