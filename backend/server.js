@@ -5,8 +5,8 @@ import dotenv from "dotenv";
 import { ClerkExpressWithAuth } from "@clerk/clerk-sdk-node";
 import { Webhook } from "svix";
 import ai_router from "./routes/ai_assistant.js";
-import multer from "multer"; // Added for file upload handling
-import axios from "axios"; // Added for forwarding to Flask
+import multer from "multer";
+import axios from "axios";
 
 dotenv.config();
 
@@ -83,8 +83,12 @@ app.use((req, res, next) => {
 
 // MongoDB Connection
 mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB connected"))
+  .connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    dbName: "docsdb", // Explicitly specify the database name
+  })
+  .then(() => console.log("MongoDB connected to docsdb"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
 // User Schema
@@ -98,6 +102,15 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model("User", userSchema);
 
+// Document Schema
+const documentSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  name: { type: String, required: true },
+  date: { type: String, required: true },
+});
+
+const Document = mongoose.model("Document", documentSchema);
+
 // API to save user with Clerk authentication
 app.post(
   "/api/users",
@@ -109,7 +122,6 @@ app.post(
     const { name, email } = req.body;
     console.log("Received user data from request body:", { name, email });
 
-    // Check if user is authenticated
     if (!req.auth?.userId) {
       return res.status(401).json({ error: "Unauthorized - Please sign in" });
     }
@@ -137,6 +149,46 @@ app.post(
   }
 );
 
+// Document API Routes
+// Get all documents
+app.get("/api/documents", async (req, res) => {
+  try {
+    const documents = await Document.find();
+    res.json(documents);
+  } catch (err) {
+    console.error("Error fetching documents:", err);
+    res.status(500).json({ message: "Error fetching documents", error: err });
+  }
+});
+
+// Add a new document
+app.post("/api/documents", async (req, res) => {
+  const { id, name, date } = req.body;
+  try {
+    const newDocument = new Document({ id, name, date });
+    await newDocument.save();
+    res.status(201).json(newDocument);
+  } catch (err) {
+    console.error("Error saving document:", err);
+    res.status(500).json({ message: "Error saving document", error: err });
+  }
+});
+
+// Delete a document
+app.delete("/api/documents/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const deletedDoc = await Document.findOneAndDelete({ id });
+    if (!deletedDoc) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+    res.json({ message: "Document deleted", id });
+  } catch (err) {
+    console.error("Error deleting document:", err);
+    res.status(500).json({ message: "Error deleting document", error: err });
+  }
+});
+
 // Webhook endpoint for Clerk events
 app.post("/api/webhooks/clerk", async (req, res) => {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
@@ -155,10 +207,10 @@ app.post("/api/webhooks/clerk", async (req, res) => {
     return res.status(400).json({ error: "Missing Svix headers" });
   }
 
-  const webhook = new Webhook(WHOOK_SECRET);
+  const webhook = new Webhook(WEBHOOK_SECRET);
   let event;
   try {
-    console.log("Raw body:", req.body.toString()); // Debug: Convert Buffer to string for readability
+    console.log("Raw body:", req.body.toString());
     event = webhook.verify(req.body, {
       "svix-id": svix_id,
       "svix-timestamp": svix_timestamp,
