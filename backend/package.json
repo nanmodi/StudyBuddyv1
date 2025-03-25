@@ -2,14 +2,15 @@
   "name": "backend",
   "version": "1.0.0",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
   "dependencies": {
     "@clerk/clerk-sdk-node": "^5.1.6",
     "axios": "^1.8.1",
@@ -19,6 +20,9 @@
     "jsonwebtoken": "^9.0.2",
     "jwks-rsa": "^3.1.0",
     "mongoose": "^8.12.1",
-    "svix": "^1.61.2"
-  }
+    "svix": "^1.61.2",
+    "multer": "^1.4.5-lts.1"
+  },
+  "devDependencies": {},
+  "description": ""
 }

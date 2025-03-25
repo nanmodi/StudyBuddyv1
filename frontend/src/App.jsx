@@ -11,6 +11,7 @@ import LandingPage from "./pages/LandingPage";
 import Navbar from "./components/Navbar";
 import UploadDocuments from "./pages/UploadDocuments";
 import FileView from "./pages/FileView";
+import Aiapp from "./components/Aiapp";
 
 const App = () => {
   const { isSignedIn, user } = useUser();
@@ -87,6 +88,7 @@ const App = () => {
           path="/file/:id"
           element={isSignedIn ? <FileView /> : <Navigate to="/" />}
         />
+        <Route path="/ai" element={<Aiapp />} />
       </Routes>
     </Router>
   );

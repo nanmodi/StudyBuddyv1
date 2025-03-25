@@ -1,23 +1,78 @@
-const express = require("express");
-const mongoose = require("mongoose");
-const cors = require("cors");
-const dotenv = require("dotenv");
-const { ClerkExpressWithAuth } = require("@clerk/clerk-sdk-node");
-const { Webhook } = require("svix");
+import express from "express";
+import mongoose from "mongoose";
+import cors from "cors";
+import dotenv from "dotenv";
+import { ClerkExpressWithAuth } from "@clerk/clerk-sdk-node";
+import { Webhook } from "svix";
+import ai_router from "./routes/ai_assistant.js";
+import multer from "multer"; // Added for file upload handling
+import axios from "axios"; // Added for forwarding to Flask
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-// Middleware
-app.use(
-  cors({
-    origin: "http://localhost:5173", // Your frontend URL
-  })
-);
+// Configure Multer for file uploads
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
 
-// Apply raw parsing BEFORE json parsing, but only for webhook route later
+// CORS configuration
+const corsOptions = {
+  origin: [
+    "http://localhost:5173", // Vite/React dev server (frontend)
+    "http://localhost:5001", // Express server (self-reference, if needed)
+    "http://localhost:5000", // Python AI server
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+};
+app.use(cors(corsOptions));
+
+// Explicitly define /upload as a public route at the top
+app.post("/upload", upload.single("file"), async (req, res) => {
+  console.log("Reached explicit /upload route in server.js");
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+    console.log("Received file:", req.file.originalname);
+
+    const formData = new FormData();
+    formData.append("file", req.file.buffer, {
+      filename: req.file.originalname,
+      contentType: req.file.mimetype,
+    });
+
+    const flaskResponse = await axios.post(
+      "http://127.0.0.1:5000/upload",
+      formData,
+      {
+        headers: {
+          ...formData.getHeaders(),
+        },
+      }
+    );
+    console.log("Flask response:", flaskResponse.data);
+    res.json(flaskResponse.data);
+  } catch (error) {
+    console.error("Error in /upload:", {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message,
+    });
+    res.status(error.response?.status || 500).json({
+      error: "File upload failed",
+      details: error.response?.data || error.message,
+    });
+  }
+});
+
+// JSON parsing middleware
+app.use(express.json());
+
+// Webhook middleware for Clerk
 app.use((req, res, next) => {
   if (req.path === "/api/webhooks/clerk") {
     express.raw({ type: "application/json" })(req, res, next);
@@ -43,32 +98,44 @@ const userSchema = new mongoose.Schema({
 
 const User = mongoose.model("User", userSchema);
 
-// API to save user
-app.post("/api/users", ClerkExpressWithAuth(), async (req, res) => {
-  const { name, email } = req.body;
-  console.log("Received user data from request body:", { name, email });
+// API to save user with Clerk authentication
+app.post(
+  "/api/users",
+  ClerkExpressWithAuth({
+    publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
+    secretKey: process.env.CLERK_SECRET_KEY,
+  }),
+  async (req, res) => {
+    const { name, email } = req.body;
+    console.log("Received user data from request body:", { name, email });
 
-  try {
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      console.log("User already exists:", existingUser);
-      return res.status(200).json(existingUser);
+    // Check if user is authenticated
+    if (!req.auth?.userId) {
+      return res.status(401).json({ error: "Unauthorized - Please sign in" });
     }
 
-    const user = new User({
-      name,
-      email,
-      clerkUserId: req.auth.userId,
-      password: "clerk-authenticated",
-    });
-    const savedUser = await user.save();
-    console.log("User saved successfully:", savedUser);
-    res.status(201).json(savedUser);
-  } catch (error) {
-    console.error("Backend error saving user:", error);
-    res.status(500).json({ error: "Server error" });
+    try {
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        console.log("User already exists:", existingUser);
+        return res.status(200).json(existingUser);
+      }
+
+      const user = new User({
+        name,
+        email,
+        clerkUserId: req.auth.userId,
+        password: "clerk-authenticated",
+      });
+      const savedUser = await user.save();
+      console.log("User saved successfully:", savedUser);
+      res.status(201).json(savedUser);
+    } catch (error) {
+      console.error("Backend error saving user:", error);
+      res.status(500).json({ error: "Server error" });
+    }
   }
-});
+);
 
 // Webhook endpoint for Clerk events
 app.post("/api/webhooks/clerk", async (req, res) => {
@@ -88,7 +155,7 @@ app.post("/api/webhooks/clerk", async (req, res) => {
     return res.status(400).json({ error: "Missing Svix headers" });
   }
 
-  const webhook = new Webhook(WEBHOOK_SECRET);
+  const webhook = new Webhook(WHOOK_SECRET);
   let event;
   try {
     console.log("Raw body:", req.body.toString()); // Debug: Convert Buffer to string for readability
@@ -157,6 +224,9 @@ app.post("/api/webhooks/clerk", async (req, res) => {
 app.get("/", (req, res) => {
   res.status(200).json({ message: "Server is running!" });
 });
+
+// Mount ai_router for other routes
+app.use("/", ai_router);
 
 // Start server
 app.listen(PORT, () => {
