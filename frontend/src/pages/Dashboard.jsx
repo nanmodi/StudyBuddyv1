@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaTrash, FaPlus, FaCheck, FaRobot } from "react-icons/fa";
+import { FaTrash, FaPlus, FaCheck, FaRobot, FaSatellite } from "react-icons/fa";
 import { documentStore } from "../pages/UploadDocuments"; // Adjust path
+import CalendarSection from "../components/CalenderSection"; // Adjust path
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -167,8 +168,23 @@ const Dashboard = () => {
             </button>
           </div>
 
+          {/* AI Doubt Solver Section */}
+          <div className="dashboard-card ai-tools-card">
+            <h2 className="card-title">Chat with AI Doubt Solver</h2>
+            <p className="ai-tools-text">
+              Solve all your doubts with our AI-powered assistant. Ask
+              questions!
+            </p>
+            <button
+              className="action-button ai-tools-button"
+              onClick={handleAiAppRedirect}
+            >
+              <FaSatellite className="ai-tools-icon" /> Try StudyHelper
+            </button>
+          </div>
+
           {/* To-Do List */}
-          <div className="dashboard-card todo-card">
+          <div className="dashboard-card todo-card" id="todo-section">
             <h2 className="card-title">To-Do List</h2>
             <div className="todo-input">
               <input
@@ -262,9 +278,11 @@ const Dashboard = () => {
               className="action-button ai-tools-button"
               onClick={handleAiAppRedirect}
             >
-              <FaRobot className="ai-tools-icon" /> Use AI Tools
+              <FaRobot className="ai-tools-icon" /> Use StudyBuddy AI
             </button>
           </div>
+          {/* Calendar Section */}
+          <CalendarSection />
         </main>
       </div>
     </div>

@@ -1,55 +1,146 @@
-import React, { useEffect, useState } from "react";
-import FullCalendar from "@fullcalendar/react";
-import dayGridPlugin from "@fullcalendar/daygrid";
-import googleCalendarPlugin from "@fullcalendar/google-calendar";
+import React, { useState } from "react";
+import Calendar from "react-calendar";
+import { FaPlus, FaTrash } from "react-icons/fa";
 
 const CalendarSection = () => {
-  const [isGapiLoaded, setIsGapiLoaded] = useState(false);
+  const [date, setDate] = useState(new Date());
+  const [events, setEvents] = useState([]);
+  const [newEventTitle, setNewEventTitle] = useState("");
+  const [newEventTime, setNewEventTime] = useState("");
 
-  // Load the Google API client library
-  useEffect(() => {
-    const script = document.createElement("script");
-    script.src = "https://apis.google.com/js/api.js";
-    script.onload = () => {
-      window.gapi.load("client", () => {
-        window.gapi.client
-          .init({
-            apiKey: import.meta.env.VITE_GOOGLE_API_KEY,
-            discoveryDocs: [
-              "https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest",
-            ],
-          })
-          .then(() => {
-            setIsGapiLoaded(true);
-          })
-          .catch((error) => {
-            console.error("Error initializing gapi client:", error);
-          });
-      });
+  // Handle date change from the calendar
+  const handleDateChange = (newDate) => {
+    setDate(newDate);
+  };
+
+  // Add a new event
+  const addEvent = () => {
+    if (!newEventTitle.trim() || !newEventTime) {
+      alert("Please enter an event title and time.");
+      return;
+    }
+
+    const eventId = Date.now().toString();
+    const eventDateTime = new Date(date);
+    const [hours, minutes] = newEventTime.split(":");
+    eventDateTime.setHours(parseInt(hours, 10), parseInt(minutes, 10));
+
+    const newEvent = {
+      id: eventId,
+      title: newEventTitle,
+      date: eventDateTime,
     };
-    document.body.appendChild(script);
-  }, []);
+
+    setEvents((prev) => [...prev, newEvent]);
+    setNewEventTitle("");
+    setNewEventTime("");
+  };
+
+  // Delete an event
+  const deleteEvent = (id) => {
+    setEvents((prev) => prev.filter((event) => event.id !== id));
+  };
+
+  // Get events for the selected date
+  const getEventsForDate = (selectedDate) => {
+    return events.filter((event) => {
+      const eventDate = new Date(event.date);
+      return (
+        eventDate.getFullYear() === selectedDate.getFullYear() &&
+        eventDate.getMonth() === selectedDate.getMonth() &&
+        eventDate.getDate() === selectedDate.getDate()
+      );
+    });
+  };
+
+  // Tile content for calendar (shows event dots)
+  const tileContent = ({ date, view }) => {
+    if (view === "month") {
+      const dayEvents = getEventsForDate(date);
+      return dayEvents.length > 0 ? (
+        <div className="event-dots">
+          {dayEvents.map((event) => (
+            <span key={event.id} className="event-dot" />
+          ))}
+        </div>
+      ) : null;
+    }
+  };
 
   return (
-    <div className="dashboard-card">
-      <h2 className="card-title">Upcoming Events</h2>
-      {isGapiLoaded ? (
-        <FullCalendar
-          plugins={[dayGridPlugin, googleCalendarPlugin]}
-          initialView="dayGridMonth"
-          googleCalendarApiKey={import.meta.env.VITE_GOOGLE_API_KEY}
-          events={{
-            googleCalendarId: import.meta.env.VITE_GOOGLE_CALENDAR_ID,
-          }}
-          height="400px"
-          eventClick={(info) => {
-            info.jsEvent.preventDefault(); // Prevent default browser behavior
-            window.open(info.event.url, "_blank"); // Open event in a new tab
-          }}
+    <div className="dashboard-card calendar-card" id="calendar-section">
+      <h2 className="card-title">Your Calendar</h2>
+      <div className="calendar-container">
+        {/* Calendar Grid */}
+        <Calendar
+          onChange={handleDateChange}
+          value={date}
+          tileContent={tileContent}
+          className="custom-calendar"
+          calendarType="gregory"
+          prevLabel={<span className="calendar-nav">⟵</span>}
+          nextLabel={<span className="calendar-nav">⟶</span>}
         />
-      ) : (
-        <p>Loading calendar...</p>
-      )}
+
+        {/* Event Input and List */}
+        <div className="calendar-events">
+          <div className="event-input">
+            <input
+              type="text"
+              value={newEventTitle}
+              onChange={(e) => setNewEventTitle(e.target.value)}
+              placeholder="Add event title..."
+              className="todo-input-field"
+              onKeyPress={(e) => e.key === "Enter" && addEvent()}
+            />
+            <input
+              type="time"
+              value={newEventTime}
+              onChange={(e) => setNewEventTime(e.target.value)}
+              className="todo-input-field time-input"
+            />
+            <button className="add-todo-button" onClick={addEvent}>
+              <FaPlus />
+            </button>
+          </div>
+
+          {/* Events for Selected Date */}
+          <div className="events-list">
+            <h3 className="events-date">
+              {date.toLocaleDateString("en-US", {
+                weekday: "long",
+                month: "long",
+                day: "numeric",
+              })}
+            </h3>
+            {getEventsForDate(date).length > 0 ? (
+              <ul className="event-items">
+                {getEventsForDate(date).map((event) => (
+                  <li key={event.id} className="event-item">
+                    <span className="event-time">
+                      {new Date(event.date).toLocaleTimeString("en-US", {
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                    <span className="event-title">{event.title}</span>
+                    <button
+                      className="delete-button"
+                      onClick={() => deleteEvent(event.id)}
+                    >
+                      <FaTrash />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="no-events-text">
+                No events scheduled for this day.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
