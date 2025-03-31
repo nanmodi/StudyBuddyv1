@@ -86,9 +86,9 @@ mongoose
   .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
-    dbName: "docsdb", // Explicitly specify the database name
+    dbName: "app-db", // Explicitly specify the database name
   })
-  .then(() => console.log("MongoDB connected to docsdb"))
+  .then(() => console.log("MongoDB connected to app-db"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
 // User Schema
@@ -110,6 +110,17 @@ const documentSchema = new mongoose.Schema({
 });
 
 const Document = mongoose.model("Document", documentSchema);
+
+// ToDo Schema
+const toDoItemSchema = new mongoose.Schema({
+  todoId: { type: String, required: true, unique: true },
+  taskDescription: { type: String, required: true },
+  isCompleted: { type: Boolean, default: false },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date },
+});
+
+const ToDoItem = mongoose.model("ToDoItem", toDoItemSchema);
 
 // API to save user with Clerk authentication
 app.post(
@@ -186,6 +197,69 @@ app.delete("/api/documents/:id", async (req, res) => {
   } catch (err) {
     console.error("Error deleting document:", err);
     res.status(500).json({ message: "Error deleting document", error: err });
+  }
+});
+
+// Get all to-do items
+app.get("/api/todos", async (req, res) => {
+  try {
+    const todos = await ToDoItem.find();
+    res.json(todos);
+  } catch (err) {
+    console.error("Error fetching todos:", err);
+    res.status(500).json({ message: "Error fetching todos", error: err });
+  }
+});
+
+// Add a new to-do item
+app.post("/api/todos", async (req, res) => {
+  const { todoId, taskDescription } = req.body;
+  try {
+    const newTodo = new ToDoItem({
+      todoId: todoId || Date.now().toString(), // Use provided ID or generate one
+      taskDescription,
+      isCompleted: false,
+    });
+    await newTodo.save();
+    res.status(201).json(newTodo);
+  } catch (err) {
+    console.error("Error saving todo:", err);
+    res.status(500).json({ message: "Error saving todo", error: err });
+  }
+});
+
+// Update a to-do item (toggle completion)
+app.put("/api/todos/:todoId", async (req, res) => {
+  const { todoId } = req.params;
+  const { isCompleted } = req.body;
+  try {
+    const updatedTodo = await ToDoItem.findOneAndUpdate(
+      { todoId },
+      { isCompleted, updatedAt: Date.now() },
+      { new: true }
+    );
+    if (!updatedTodo) {
+      return res.status(404).json({ message: "To-do item not found" });
+    }
+    res.json(updatedTodo);
+  } catch (err) {
+    console.error("Error updating todo:", err);
+    res.status(500).json({ message: "Error updating todo", error: err });
+  }
+});
+
+// Delete a to-do item
+app.delete("/api/todos/:todoId", async (req, res) => {
+  const { todoId } = req.params;
+  try {
+    const deletedTodo = await ToDoItem.findOneAndDelete({ todoId });
+    if (!deletedTodo) {
+      return res.status(404).json({ message: "To-do item not found" });
+    }
+    res.json({ message: "To-do item deleted", todoId });
+  } catch (err) {
+    console.error("Error deleting todo:", err);
+    res.status(500).json({ message: "Error deleting todo", error: err });
   }
 });
 
@@ -278,7 +352,7 @@ app.get("/", (req, res) => {
 });
 
 // Mount ai_router for other routes
-app.use("/", ai_router);
+//app.use("/", ai_router);
 
 // Start server
 app.listen(PORT, () => {

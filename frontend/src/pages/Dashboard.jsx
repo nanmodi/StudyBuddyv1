@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaTrash } from "react-icons/fa";
+import { FaTrash, FaPlus, FaCheck, FaRobot } from "react-icons/fa";
 import { documentStore } from "../pages/UploadDocuments"; // Adjust path
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [recentUploads, setRecentUploads] = useState([]);
   const [affirmation, setAffirmation] = useState("");
+  const [todos, setTodos] = useState([]);
+  const [newTodo, setNewTodo] = useState("");
   const studyProgress = { completed: 65 };
 
-  // List of affirmations
   const affirmations = [
     "You’re capable of amazing things—keep pushing forward!",
     "Every step you take brings you closer to your goals.",
@@ -23,14 +24,12 @@ const Dashboard = () => {
     "The best is yet to come—keep going!",
   ];
 
-  // Fetch documents from MongoDB and set random affirmation on mount
   useEffect(() => {
     const fetchDocuments = async () => {
       try {
         const response = await fetch("http://localhost:5001/api/documents");
-        if (!response.ok) {
+        if (!response.ok)
           throw new Error(`HTTP error! Status: ${response.status}`);
-        }
         const documents = await response.json();
         setRecentUploads(documents);
         documents.forEach((doc) => documentStore.set(doc.id, doc));
@@ -40,10 +39,9 @@ const Dashboard = () => {
     };
     fetchDocuments();
 
-    // Set a random affirmation on each reload
     const randomIndex = Math.floor(Math.random() * affirmations.length);
     setAffirmation(affirmations[randomIndex]);
-  }, []); // Empty dependency array ensures this runs only on mount
+  }, []);
 
   const handleUploadRedirect = () => navigate("/upload-documents");
   const handleAiAppRedirect = () => navigate("/ai");
@@ -65,16 +63,75 @@ const Dashboard = () => {
       console.error("Error deleting document:", err.message);
     }
   };
+  const addTodo = async () => {
+    if (newTodo.trim()) {
+      try {
+        const response = await fetch("http://localhost:5001/api/todos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ taskDescription: newTodo }),
+        });
+        if (!response.ok)
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        const newTodoItem = await response.json();
+        setTodos((prev) => [...prev, newTodoItem]);
+        setNewTodo("");
+      } catch (err) {
+        console.error("Error adding todo:", err.message);
+      }
+    }
+  };
+
+  const toggleTodo = async (todoId, currentStatus) => {
+    try {
+      const response = await fetch(
+        `http://localhost:5001/api/todos/${todoId}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ isCompleted: !currentStatus }),
+        }
+      );
+      if (!response.ok)
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      const updatedTodo = await response.json();
+      setTodos((prev) =>
+        prev.map((todo) => (todo.todoId === todoId ? updatedTodo : todo))
+      );
+    } catch (err) {
+      console.error("Error toggling todo:", err.message);
+    }
+  };
+
+  const deleteTodo = async (todoId) => {
+    try {
+      const response = await fetch(
+        `http://localhost:5001/api/todos/${todoId}`,
+        {
+          method: "DELETE",
+        }
+      );
+      if (!response.ok)
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      setTodos((prev) => prev.filter((todo) => todo.todoId !== todoId));
+    } catch (err) {
+      console.error("Error deleting todo:", err.message);
+    }
+  };
 
   return (
     <div className="dashboard-page">
-      <section className="dashboard-section">
-        <h1 className="dashboard-title">Welcome Back to StudyBuddy</h1>
-        <p className="dashboard-subtitle">
-          Your personalized hub for smarter studying.
-        </p>
+      {/* Affirmation Header */}
+      <header className="dashboard-header">
+        <div className="affirmation-banner">
+          <p className="affirmation-text">“{affirmation}”</p>
+        </div>
+      </header>
 
-        <div className="dashboard-grid">
+      <div className="dashboard-container">
+        {/* Sidebar */}
+        <aside className="dashboard-sidebar">
+          {/* Recent Uploads */}
           <div className="dashboard-card uploads-card">
             <h2 className="card-title">Recent Uploads</h2>
             {recentUploads.length > 0 ? (
@@ -110,6 +167,58 @@ const Dashboard = () => {
             </button>
           </div>
 
+          {/* To-Do List */}
+          <div className="dashboard-card todo-card">
+            <h2 className="card-title">To-Do List</h2>
+            <div className="todo-input">
+              <input
+                type="text"
+                value={newTodo}
+                onChange={(e) => setNewTodo(e.target.value)}
+                placeholder="Add a new task..."
+                className="todo-input-field"
+                onKeyPress={(e) => e.key === "Enter" && addTodo()}
+              />
+              <button className="add-todo-button" onClick={addTodo}>
+                <FaPlus />
+              </button>
+            </div>
+            <ul className="todo-list">
+              {todos.map((todo) => (
+                <li key={todo.todoId} className="todo-item">
+                  <button
+                    className={`todo-check ${
+                      todo.isCompleted ? "completed" : ""
+                    }`}
+                    onClick={() => toggleTodo(todo.todoId, todo.isCompleted)}
+                  >
+                    <FaCheck />
+                  </button>
+                  <span
+                    className={`todo-text ${
+                      todo.isCompleted ? "completed" : ""
+                    }`}
+                  >
+                    {todo.taskDescription}
+                  </span>
+                  <button
+                    className="delete-button"
+                    onClick={() => deleteTodo(todo.todoId)}
+                  >
+                    <FaTrash />
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {todos.length === 0 && (
+              <p className="no-todos-text">No tasks yet—add one!</p>
+            )}
+          </div>
+        </aside>
+
+        {/* Main Content */}
+        <main className="dashboard-main">
+          {/* Study Progress */}
           <div className="dashboard-card progress-card">
             <h2 className="card-title">Study Progress</h2>
             <div className="progress-circle">
@@ -142,26 +251,22 @@ const Dashboard = () => {
             </p>
           </div>
 
-          <div className="dashboard-card affirmation-card">
-            <h2 className="card-title">Daily Affirmation</h2>
-            <div className="affirmation-content">
-              <p className="affirmation-text">“{affirmation}”</p>
-            </div>
+          {/* AI Tools Section */}
+          <div className="dashboard-card ai-tools-card">
+            <h2 className="card-title">Enhance Your Learning</h2>
+            <p className="ai-tools-text">
+              Use our AI-powered tools to generate flashcards, summaries, and
+              more from your documents.
+            </p>
+            <button
+              className="action-button ai-tools-button"
+              onClick={handleAiAppRedirect}
+            >
+              <FaRobot className="ai-tools-icon" /> Use AI Tools
+            </button>
           </div>
-
-          <div className="dashboard-card actions-card">
-            <h2 className="card-title">Quick Actions</h2>
-            <div className="actions-list">
-              <button className="action-button" onClick={handleUploadRedirect}>
-                Upload Document
-              </button>
-              <button className="action-button" onClick={handleAiAppRedirect}>
-                Use AI Tools
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
+        </main>
+      </div>
     </div>
   );
 };
