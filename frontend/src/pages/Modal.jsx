@@ -1,111 +1,134 @@
-// Modal.jsx
-import React, { useState, useRef } from "react";
-import { FaFolderOpen } from "react-icons/fa"; // Minimalistic folder icon (outline)
+import React, { useState, useEffect } from "react";
+import { FaUpload } from "react-icons/fa";
 
-const Modal = ({ isOpen, onClose, onUpload }) => {
-  const [selectedFiles, setSelectedFiles] = useState([]);
-  const [uploadStatus, setUploadStatus] = useState("");
+const Modal = ({
+  isOpen,
+  onClose,
+  onUpload,
+  folders,
+  selectedFolder,
+  setSelectedFolder,
+}) => {
+  const [files, setFiles] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
-  const fileInputRef = useRef(null);
+  const [status, setStatus] = useState("");
 
-  if (!isOpen) return null;
-
-  const handleFileChange = (event) => {
-    const files = Array.from(event.target.files);
-    setSelectedFiles(files);
-    setUploadStatus(`${files.length} file(s) selected`);
-  };
-
-  const handleDrop = (event) => {
-    event.preventDefault();
-    setIsDragging(false);
-    const files = Array.from(event.dataTransfer.files);
-    setSelectedFiles(files);
-    setUploadStatus(`${files.length} file(s) dropped`);
-  };
-
-  const handleDragOver = (event) => {
-    event.preventDefault();
+  const handleDragOver = (e) => {
+    e.preventDefault();
     setIsDragging(true);
   };
 
-  const handleDragLeave = () => {
+  const handleDragLeave = (e) => {
+    e.preventDefault();
     setIsDragging(false);
   };
 
-  const handleBrowseClick = () => {
-    fileInputRef.current.click();
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    setFiles((prev) => [...prev, ...droppedFiles]);
   };
 
-  const handleUpload = () => {
-    if (selectedFiles.length === 0) {
-      setUploadStatus("Please select files first");
+  const handleFileChange = (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    setFiles((prev) => [...prev, ...selectedFiles]);
+  };
+
+  const handleUpload = async () => {
+    if (files.length === 0) {
+      setStatus("Please select at least one file to upload.");
       return;
     }
 
-    setUploadStatus("Uploading...");
-    setTimeout(() => {
-      setUploadStatus("Files uploaded successfully!");
-      onUpload(selectedFiles);
-      setSelectedFiles([]);
-      setUploadStatus("");
-    }, 2000);
+    setStatus("Uploading...");
+    try {
+      await onUpload(files);
+      setStatus("Upload successful!");
+      setFiles([]);
+      setTimeout(() => {
+        setStatus("");
+        onClose();
+      }, 1500);
+    } catch (err) {
+      setStatus("Upload failed. Please try again.");
+    }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="modal-overlay">
       <div className="modal-content">
-        <button className="modal-close-button" onClick={onClose}>
-          ✕
+        <button
+          className="modal-close-button"
+          onClick={onClose}
+          aria-label="Close Modal"
+        >
+          &times;
         </button>
-        <h2 className="modal-title">Upload Files</h2>
+        <h2 className="modal-title">Upload Documents</h2>
 
-        <div className="modal-upload-section">
-          <div
-            className={`modal-dropzone ${isDragging ? "dragging" : ""}`}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onClick={handleBrowseClick}
+        {/* Folder Selection Dropdown */}
+        <div className="folder-select-section">
+          <label htmlFor="folder-select" className="folder-select-label">
+            Select Folder:
+          </label>
+          <select
+            id="folder-select"
+            value={selectedFolder}
+            onChange={(e) => setSelectedFolder(e.target.value)}
+            className="folder-select"
           >
-            <FaFolderOpen className="modal-upload-icon" />
-            <p className="modal-instruction">
-              Browse or drag and drop files here
-            </p>
-            <p className="modal-filetypes">PDF, DOC, DOCX, TXT</p>
-            <input
-              type="file"
-              multiple
-              onChange={handleFileChange}
-              ref={fileInputRef}
-              className="hidden-file-input"
-              accept=".pdf,.doc,.docx,.txt"
-            />
-          </div>
-
-          {selectedFiles.length > 0 && (
-            <div className="modal-file-list">
-              <h3>Selected Files:</h3>
-              <ul>
-                {selectedFiles.map((file, index) => (
-                  <li key={index} className="modal-file-item">
-                    {file.name}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <button
-            onClick={handleUpload}
-            className="modal-upload-button"
-            disabled={selectedFiles.length === 0}
-          >
-            Upload Files
-          </button>
-
-          {uploadStatus && <p className="modal-status">{uploadStatus}</p>}
+            {folders.map((folder) => (
+              <option key={folder} value={folder}>
+                {folder}
+              </option>
+            ))}
+          </select>
         </div>
+
+        <div
+          className={`modal-dropzone ${isDragging ? "dragging" : ""}`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => document.getElementById("file-input").click()}
+        >
+          <FaUpload className="modal-upload-icon" />
+          <p className="modal-instruction">
+            Drag & drop your files here or click to select
+          </p>
+          <p className="modal-filetypes">Supported: PDF, DOCX, TXT</p>
+          <input
+            id="file-input"
+            type="file"
+            multiple
+            onChange={handleFileChange}
+            className="hidden-file-input"
+          />
+        </div>
+
+        {files.length > 0 && (
+          <div className="modal-file-list">
+            <h3>Selected Files:</h3>
+            {files.map((file, index) => (
+              <p key={index} className="modal-file-item">
+                {file.name}
+              </p>
+            ))}
+          </div>
+        )}
+
+        <button
+          onClick={handleUpload}
+          className="modal-upload-button"
+          disabled={files.length === 0}
+        >
+          Upload Files
+        </button>
+
+        {status && <p className="modal-status">{status}</p>}
       </div>
     </div>
   );

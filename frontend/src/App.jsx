@@ -14,6 +14,7 @@ import FileView from "./pages/FileView";
 import Aiapp from "./components/Aiapp";
 import PricingPlan from "./pages/PricingPlan";
 import Dashboard from "./pages/Dashboard";
+import Notes from "./pages/Notes";
 
 const App = () => {
   const { isSignedIn, user } = useUser();
@@ -96,6 +97,7 @@ const App = () => {
           path="/dashboard"
           element={isSignedIn ? <Dashboard /> : <Navigate to="/" />}
         />
+        <Route path="/notes" element={<Notes />} />
       </Routes>
     </Router>
   );

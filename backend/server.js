@@ -107,8 +107,8 @@ const documentSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
   name: { type: String, required: true },
   date: { type: String, required: true },
+  folder: { type: String, default: "Uncategorized" },
 });
-
 const Document = mongoose.model("Document", documentSchema);
 
 // ToDo Schema
@@ -121,6 +121,63 @@ const toDoItemSchema = new mongoose.Schema({
 });
 
 const ToDoItem = mongoose.model("ToDoItem", toDoItemSchema);
+
+// Notes Schema (studydb)
+const noteSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  clerkUserId: { type: String, required: true }, // Link to the user
+  title: { type: String, required: true },
+  content: { type: String, required: true },
+  date: { type: String, required: true },
+});
+const Note = mongoose.model("Note", noteSchema);
+
+// Notes API Routes
+// Get all notes for a user
+app.get("/api/notes/:clerkUserId", async (req, res) => {
+  try {
+    const { clerkUserId } = req.params;
+    const notes = await Note.find({ clerkUserId });
+    res.json(notes);
+  } catch (err) {
+    console.error("Error fetching notes:", err);
+    res.status(500).json({ message: "Error fetching notes", error: err });
+  }
+});
+
+// Add a new note
+app.post("/api/notes", async (req, res) => {
+  const { id, clerkUserId, title, content } = req.body;
+  try {
+    const newNote = new Note({
+      id,
+      clerkUserId,
+      title,
+      content,
+      date: new Date().toISOString().split("T")[0],
+    });
+    await newNote.save();
+    res.status(201).json(newNote);
+  } catch (err) {
+    console.error("Error saving note:", err);
+    res.status(500).json({ message: "Error saving note", error: err });
+  }
+});
+
+// Delete a note
+app.delete("/api/notes/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const deletedNote = await Note.findOneAndDelete({ id });
+    if (!deletedNote) {
+      return res.status(404).json({ message: "Note not found" });
+    }
+    res.json({ message: "Note deleted", id });
+  } catch (err) {
+    console.error("Error deleting note:", err);
+    res.status(500).json({ message: "Error deleting note", error: err });
+  }
+});
 
 // API to save user with Clerk authentication
 app.post(
@@ -164,7 +221,9 @@ app.post(
 // Get all documents
 app.get("/api/documents", async (req, res) => {
   try {
-    const documents = await Document.find();
+    const { folder } = req.query; // Get folder from query parameter
+    const query = folder ? { folder } : {};
+    const documents = await Document.find(query);
     res.json(documents);
   } catch (err) {
     console.error("Error fetching documents:", err);
@@ -174,9 +233,9 @@ app.get("/api/documents", async (req, res) => {
 
 // Add a new document
 app.post("/api/documents", async (req, res) => {
-  const { id, name, date } = req.body;
+  const { id, name, date, folder } = req.body; // Include folder in the request body
   try {
-    const newDocument = new Document({ id, name, date });
+    const newDocument = new Document({ id, name, date, folder });
     await newDocument.save();
     res.status(201).json(newDocument);
   } catch (err) {

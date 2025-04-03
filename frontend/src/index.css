@@ -354,6 +354,7 @@ body {
 }
 
 /* UploadDocuments Styles */
+/* UploadDocuments Styles */
 .upload-container {
   min-height: 100vh;
   background: linear-gradient(135deg, #121212 0%, #1f1f1f 100%);
@@ -383,6 +384,31 @@ body {
   -webkit-text-fill-color: transparent;
 }
 
+.upload-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.create-folder-button {
+  background: linear-gradient(90deg, #1565c0, #1e88e5);
+  padding: 12px 24px;
+  border: none;
+  border-radius: 50px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.create-folder-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(21, 101, 192, 0.4);
+}
+
 .upload-files-button {
   background: linear-gradient(90deg, #1e88e5, #42a5f5);
   padding: 12px 24px;
@@ -403,12 +429,13 @@ body {
   box-shadow: 0 6px 15px rgba(30, 136, 229, 0.4);
 }
 
-.plus-icon {
+.plus-icon,
+.folder-icon {
   font-size: 1.2rem;
 }
 
-/* Kanban Board Styles */
-.kanban-board {
+/* Folder Board Styles */
+.folder-board {
   width: 100%;
   max-width: 800px;
   padding: 20px;
@@ -417,6 +444,55 @@ body {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
+.folder-section {
+  margin-bottom: 1.5rem;
+}
+
+.folder-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: #252525;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.folder-header:hover {
+  background: #2e2e2e;
+}
+
+.folder-title-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.folder-chevron {
+  font-size: 1rem;
+  color: #1e88e5;
+}
+
+.folder-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.folder-count {
+  font-size: 0.9rem;
+  color: #b0b0b0;
+}
+
+.folder-documents {
+  padding: 1rem;
+  background: #1e1e1e;
+  border-radius: 12px;
+  margin-top: 0.5rem;
+}
+
+/* Kanban Board Styles (for documents within folders) */
 .kanban-column {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -485,13 +561,6 @@ body {
   color: #b71c1c;
 }
 
-/* Dashboard Delete Button */
-.upload-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
 /* No Files State */
 .no-files-container {
   display: flex;
@@ -509,7 +578,7 @@ body {
   color: #b0b0b0;
 }
 
-/* Modal Styles */
+/* Modal Styles (Updated for Folder Selection) */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -559,6 +628,54 @@ body {
   color: #ffffff;
   margin-bottom: 20px;
   text-align: center;
+}
+
+/* Folder Selection in Modal */
+.folder-select-section {
+  width: 80%;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.folder-select-label {
+  font-size: 1rem;
+  color: #e0e0e0;
+  margin-bottom: 5px;
+  display: block;
+}
+
+.folder-select {
+  width: 100%;
+  padding: 8px;
+  background: #252525;
+  border: none;
+  border-radius: 8px;
+  color: #e0e0e0;
+  font-size: 1rem;
+  outline: none;
+  transition: background 0.3s;
+}
+
+.folder-select:focus {
+  background: #2e2e2e;
+}
+
+/* Folder Input in Create Folder Modal */
+.folder-input {
+  width: 80%;
+  padding: 10px;
+  margin-bottom: 20px;
+  background: #252525;
+  border: none;
+  border-radius: 8px;
+  color: #e0e0e0;
+  font-size: 1rem;
+  outline: none;
+  transition: background 0.3s;
+}
+
+.folder-input:focus {
+  background: #2e2e2e;
 }
 
 .modal-upload-section {
@@ -1785,4 +1902,257 @@ body {
   .custom-calendar {
     max-width: none;
   }
+}
+
+/* Notes Styles */
+.notes-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #121212 0%, #1f1f1f 100%);
+  padding: 80px 20px; /* Accounting for fixed navbar */
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.notes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 800px;
+  margin-bottom: 2rem;
+}
+
+.notes-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(90deg, #1e88e5, #64b5f6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.notes-content {
+  width: 100%;
+  max-width: 800px;
+}
+
+.notes-form {
+  background: #1f1f1f;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  margin-bottom: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.notes-input {
+  padding: 0.8rem;
+  background: #252525;
+  border: none;
+  border-radius: 8px;
+  color: #e0e0e0;
+  font-size: 1rem;
+  outline: none;
+  transition: background 0.3s;
+}
+
+.notes-input:focus {
+  background: #2e2e2e;
+}
+
+.notes-textarea {
+  padding: 0.8rem;
+  background: #252525;
+  border: none;
+  border-radius: 8px;
+  color: #e0e0e0;
+  font-size: 1rem;
+  outline: none;
+  min-height: 150px;
+  resize: vertical;
+  transition: background 0.3s;
+}
+
+.notes-textarea:focus {
+  background: #2e2e2e;
+}
+
+.notes-button {
+  background: linear-gradient(90deg, #1e88e5, #42a5f5);
+  padding: 10px 20px;
+  border: none;
+  border-radius: 50px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: transform 0.3s, box-shadow 0.3s;
+  width: fit-content;
+}
+
+.notes-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(30, 136, 229, 0.4);
+}
+
+.notes-cancel-button {
+  background: #666;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 50px;
+  font-size: 1rem;
+  cursor: pointer;
+  color: white;
+  transition: background 0.3s, transform 0.3s;
+  width: fit-content;
+}
+
+.notes-cancel-button:hover {
+  background: #808080;
+  transform: scale(1.05);
+}
+
+.notes-list {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.note-card {
+  background: #252525;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s, box-shadow 0.3s;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.note-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.note-content {
+  flex: 1;
+}
+
+.note-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #e0e0e0;
+  margin-bottom: 0.5rem;
+}
+
+.note-text {
+  font-size: 1rem;
+  color: #b0b0b0;
+  margin-bottom: 0.5rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.note-date {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.note-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.edit-button,
+.delete-button {
+  background: none;
+  border: none;
+  color: #1e88e5;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 5px;
+  transition: color 0.3s;
+}
+
+.edit-button:hover {
+  color: #1565c0;
+}
+
+.delete-button:hover {
+  color: #e53935;
+}
+
+.no-notes-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  background: #1f1f1f;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 800px;
+}
+
+.no-notes-text {
+  font-size: 1.2rem;
+  color: #b0b0b0;
+}
+
+/* Timer Section */
+.timer-card {
+  flex: 1; /* Allow it to take equal space with the progress card */
+  text-align: center;
+  padding: 1.5rem;
+  min-width: 250px; /* Ensure it doesn't get too narrow */
+}
+
+.timer-display {
+  margin-bottom: 1.5rem;
+}
+
+.timer-time {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(90deg, #1e88e5, #64b5f6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.timer-controls {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.timer-button {
+  background: #252525;
+  border: none;
+  border-radius: 50%;
+  padding: 0.8rem;
+  color: #1e88e5;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: background 0.3s, transform 0.3s;
+}
+
+.timer-button:hover {
+  background: #2e2e2e;
+  transform: scale(1.1);
+}
+
+.timer-text {
+  font-size: 1rem;
+  color: #b0b0b0;
+  text-align: center;
 }

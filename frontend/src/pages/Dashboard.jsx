@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FaTrash, FaPlus, FaCheck, FaRobot, FaSatellite } from "react-icons/fa";
 import { documentStore } from "../pages/UploadDocuments"; // Adjust path
 import CalendarSection from "../components/CalenderSection"; // Adjust path
+import Timer from "../components/Timer"; // Import the new Timer component
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -64,6 +65,7 @@ const Dashboard = () => {
       console.error("Error deleting document:", err.message);
     }
   };
+
   const addTodo = async () => {
     if (newTodo.trim()) {
       try {
@@ -234,37 +236,43 @@ const Dashboard = () => {
 
         {/* Main Content */}
         <main className="dashboard-main">
-          {/* Study Progress */}
-          <div className="dashboard-card progress-card">
-            <h2 className="card-title">Study Progress</h2>
-            <div className="progress-circle">
-              <svg className="progress-ring" width="120" height="120">
-                <circle
-                  className="progress-ring__background"
-                  cx="60"
-                  cy="60"
-                  r="54"
-                  strokeWidth="12"
-                />
-                <circle
-                  className="progress-ring__fill"
-                  cx="60"
-                  cy="60"
-                  r="54"
-                  strokeWidth="12"
-                  strokeDasharray="339.292"
-                  strokeDashoffset={
-                    339.292 * (1 - studyProgress.completed / 100)
-                  }
-                />
-              </svg>
-              <span className="progress-percentage">
-                {studyProgress.completed}%
-              </span>
+          {/* Study Progress and Timer */}
+          <div className="progress-and-calendar-container">
+            {/* Study Progress */}
+            <div className="dashboard-card progress-card">
+              <h2 className="card-title">Study Progress</h2>
+              <div className="progress-circle">
+                <svg className="progress-ring" width="120" height="120">
+                  <circle
+                    className="progress-ring__background"
+                    cx="60"
+                    cy="60"
+                    r="54"
+                    strokeWidth="12"
+                  />
+                  <circle
+                    className="progress-ring__fill"
+                    cx="60"
+                    cy="60"
+                    r="54"
+                    strokeWidth="12"
+                    strokeDasharray="339.292"
+                    strokeDashoffset={
+                      339.292 * (1 - studyProgress.completed / 100)
+                    }
+                  />
+                </svg>
+                <span className="progress-percentage">
+                  {studyProgress.completed}%
+                </span>
+              </div>
+              <p className="progress-text">
+                You’re making great progress—keep it up!
+              </p>
             </div>
-            <p className="progress-text">
-              You’re making great progress—keep it up!
-            </p>
+
+            {/* Timer */}
+            <Timer />
           </div>
 
           {/* AI Tools Section */}
@@ -281,6 +289,7 @@ const Dashboard = () => {
               <FaRobot className="ai-tools-icon" /> Use StudyBuddy AI
             </button>
           </div>
+
           {/* Calendar Section */}
           <CalendarSection />
         </main>
