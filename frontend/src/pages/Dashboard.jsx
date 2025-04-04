@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaTrash, FaPlus, FaCheck, FaRobot, FaSatellite } from "react-icons/fa";
+import {
+  FaTrash,
+  FaPlus,
+  FaCheck,
+  FaRobot,
+  FaScrewdriver,
+} from "react-icons/fa";
 import { documentStore } from "../pages/UploadDocuments"; // Adjust path
 import CalendarSection from "../components/CalenderSection"; // Adjust path
 import Timer from "../components/Timer"; // Import the new Timer component
@@ -181,7 +187,7 @@ const Dashboard = () => {
               className="action-button ai-tools-button"
               onClick={handleAiAppRedirect}
             >
-              <FaSatellite className="ai-tools-icon" /> Try StudyHelper
+              <FaScrewdriver className="ai-tools-icon" /> Try StudyHelper
             </button>
           </div>
 
