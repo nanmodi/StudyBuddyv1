@@ -1,6 +1,6 @@
 import React from "react";
 import { useAuth, UserButton } from "@clerk/clerk-react";
-import { FaCalendar, FaCheck } from "react-icons/fa";
+import { Link } from "react-router-dom";
 
 const Navbar = () => {
   const { isSignedIn, signOut } = useAuth();
@@ -18,20 +18,18 @@ const Navbar = () => {
   return (
     <nav className="navbar">
       <div className="nav-links">
-        <button
-          className="nav-link"
-          onClick={() => scrollToSection("calendar-section")}
-        >
-          <FaCalendar className="nav-icon" />
-          Calendar
-        </button>
-        <button
-          className="nav-link"
-          onClick={() => scrollToSection("todo-section")}
-        >
-          <FaCheck className="nav-icon" />
-          To-Do
-        </button>
+        <Link to="/upload-documents" className="nav-link">
+          Upload
+        </Link>
+        <Link to="/pricing" className="nav-link">
+          Pricing
+        </Link>
+        <Link to="/ai" className="nav-link">
+          AI tools
+        </Link>
+        <Link to="/notes" className="nav-link">
+          Notes
+        </Link>
       </div>
       <div className="nav-content">
         <UserButton />

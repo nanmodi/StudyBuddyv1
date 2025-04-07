@@ -132,6 +132,129 @@ const noteSchema = new mongoose.Schema({
 });
 const Note = mongoose.model("Note", noteSchema);
 
+// Progress Schema (studydb)
+const progressSchema = new mongoose.Schema({
+  clerkUserId: { type: String, required: true }, // Link to the user
+  documents: { type: Number, default: 0 }, // Number of uploaded documents
+  completedTodos: { type: Number, default: 0 }, // Number of completed to-dos
+  notes: { type: Number, default: 0 }, // Number of notes
+  completedPomodoros: { type: Number, default: 0 }, // Number of completed Pomodoros
+  events: { type: Number, default: 0 }, // Number of calendar events
+  lastActiveDate: { type: Date, default: Date.now }, // Last day of activity for streak
+  streak: { type: Number, default: 0 }, // Consecutive days of activity
+  updatedAt: { type: Date, default: Date.now }, // Last update timestamp
+});
+
+const Progress = mongoose.model("Progress", progressSchema);
+
+// Progress API Routes
+// Get progress for a user
+app.get("/api/progress/:clerkUserId", async (req, res) => {
+  try {
+    const { clerkUserId } = req.params;
+    let progress = await Progress.findOne({ clerkUserId });
+    if (!progress) {
+      progress = new Progress({ clerkUserId });
+      await progress.save();
+    }
+    res.json(progress);
+  } catch (err) {
+    console.error("Error fetching progress:", err);
+    res.status(500).json({ message: "Error fetching progress", error: err });
+  }
+});
+
+// Update progress for a user
+app.put("/api/progress/:clerkUserId", async (req, res) => {
+  const { clerkUserId } = req.params;
+  const { documents, completedTodos, notes, completedPomodoros, events } =
+    req.body;
+
+  try {
+    let progress = await Progress.findOne({ clerkUserId });
+    if (!progress) {
+      progress = new Progress({ clerkUserId });
+    }
+
+    // Update metrics
+    progress.documents = documents || progress.documents;
+    progress.completedTodos = completedTodos || progress.completedTodos;
+    progress.notes = notes || progress.notes;
+    progress.completedPomodoros =
+      completedPomodoros || progress.completedPomodoros;
+    progress.events = events || progress.events;
+
+    // Update streak
+    const today = new Date().toDateString();
+    const lastActiveDate = new Date(progress.lastActiveDate).toDateString();
+    if (lastActiveDate === today) {
+      progress.streak = progress.streak; // No change if same day
+    } else if (
+      new Date(today) - new Date(lastActiveDate) ===
+      24 * 60 * 60 * 1000
+    ) {
+      progress.streak += 1; // Increment streak if consecutive day
+    } else {
+      progress.streak = 1; // Reset streak if not consecutive
+    }
+    progress.lastActiveDate = new Date();
+
+    progress.updatedAt = new Date();
+    await progress.save();
+
+    res.json(progress);
+  } catch (err) {
+    console.error("Error updating progress:", err);
+    res.status(500).json({ message: "Error updating progress", error: err });
+  }
+});
+
+// Events Schema (studydb)
+const eventSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  title: { type: String, required: true },
+  date: { type: Date, required: true },
+});
+
+const Event = mongoose.model("Event", eventSchema);
+
+// Events API Routes
+app.get("/api/events", async (req, res) => {
+  try {
+    const events = await Event.find();
+    res.json(events);
+  } catch (err) {
+    console.error("Error fetching events:", err);
+    res.status(500).json({ message: "Error fetching events", error: err });
+  }
+});
+
+app.post("/api/events", async (req, res) => {
+  const { id, title, date } = req.body;
+  try {
+    const newEvent = new Event({ id, title, date });
+    await newEvent.save();
+    res.status(201).json(newEvent);
+  } catch (err) {
+    console.error("Error saving event:", err);
+    res.status(500).json({ message: "Error saving event", error: err });
+  }
+});
+
+app.delete("/api/events/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const deletedEvent = await Event.findOneAndDelete({ id });
+    if (!deletedEvent) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+    res.json({ message: "Event deleted", id });
+  } catch (err) {
+    console.error("Error deleting event:", err);
+    res.status(500).json({ message: "Error deleting event", error: err });
+  }
+});
+
 // Notes API Routes
 // Get all notes for a user
 app.get("/api/notes/:clerkUserId", async (req, res) => {

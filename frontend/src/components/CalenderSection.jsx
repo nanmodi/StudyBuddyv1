@@ -1,12 +1,28 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Calendar from "react-calendar";
 import { FaPlus, FaTrash } from "react-icons/fa";
 
-const CalendarSection = () => {
+const CalendarSection = ({ onEventAdded }) => {
   const [date, setDate] = useState(new Date());
   const [events, setEvents] = useState([]);
   const [newEventTitle, setNewEventTitle] = useState("");
   const [newEventTime, setNewEventTime] = useState("");
+
+  // Fetch events from database (assuming a new endpoint for events)
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const response = await fetch("http://localhost:5001/api/events"); // Add this endpoint
+        if (!response.ok)
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        const eventsData = await response.json();
+        setEvents(eventsData);
+      } catch (err) {
+        console.error("Error fetching events:", err.message);
+      }
+    };
+    fetchEvents();
+  }, []);
 
   // Handle date change from the calendar
   const handleDateChange = (newDate) => {
@@ -14,7 +30,7 @@ const CalendarSection = () => {
   };
 
   // Add a new event
-  const addEvent = () => {
+  const addEvent = async () => {
     if (!newEventTitle.trim() || !newEventTime) {
       alert("Please enter an event title and time.");
       return;
@@ -31,14 +47,36 @@ const CalendarSection = () => {
       date: eventDateTime,
     };
 
-    setEvents((prev) => [...prev, newEvent]);
-    setNewEventTitle("");
-    setNewEventTime("");
+    try {
+      const response = await fetch("http://localhost:5001/api/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newEvent),
+      });
+      if (!response.ok)
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      const savedEvent = await response.json();
+      setEvents((prev) => [...prev, savedEvent]);
+      setNewEventTitle("");
+      setNewEventTime("");
+      if (onEventAdded) onEventAdded(); // Notify parent to update progress
+    } catch (err) {
+      console.error("Error adding event:", err.message);
+    }
   };
 
   // Delete an event
-  const deleteEvent = (id) => {
-    setEvents((prev) => prev.filter((event) => event.id !== id));
+  const deleteEvent = async (id) => {
+    try {
+      const response = await fetch(`http://localhost:5001/api/events/${id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok)
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      setEvents((prev) => prev.filter((event) => event.id !== id));
+    } catch (err) {
+      console.error("Error deleting event:", err.message);
+    }
   };
 
   // Get events for the selected date

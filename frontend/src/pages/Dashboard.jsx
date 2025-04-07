@@ -1,23 +1,28 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  FaTrash,
-  FaPlus,
-  FaCheck,
-  FaRobot,
-  FaScrewdriver,
-} from "react-icons/fa";
+import { useAuth } from "@clerk/clerk-react";
+import { FaTrash, FaPlus, FaCheck, FaRobot, FaSatellite } from "react-icons/fa";
 import { documentStore } from "../pages/UploadDocuments"; // Adjust path
 import CalendarSection from "../components/CalenderSection"; // Adjust path
-import Timer from "../components/Timer"; // Import the new Timer component
+import Timer from "../components/Timer"; // Adjust path
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { userId: clerkUserId } = useAuth();
   const [recentUploads, setRecentUploads] = useState([]);
   const [affirmation, setAffirmation] = useState("");
   const [todos, setTodos] = useState([]);
+  const [notes, setNotes] = useState([]);
   const [newTodo, setNewTodo] = useState("");
-  const studyProgress = { completed: 65 };
+  const [progress, setProgress] = useState({
+    documents: 0,
+    completedTodos: 0,
+    notes: 0,
+    completedPomodoros: 0,
+    events: 0,
+    streak: 0,
+  });
+  const [studyProgress, setStudyProgress] = useState(0);
 
   const affirmations = [
     "You’re capable of amazing things—keep pushing forward!",
@@ -32,7 +37,10 @@ const Dashboard = () => {
     "The best is yet to come—keep going!",
   ];
 
+  // Fetch data on mount
   useEffect(() => {
+    if (!clerkUserId) return;
+
     const fetchDocuments = async () => {
       try {
         const response = await fetch("http://localhost:5001/api/documents");
@@ -45,11 +53,113 @@ const Dashboard = () => {
         console.error("Error fetching documents:", err.message);
       }
     };
+
+    const fetchTodos = async () => {
+      try {
+        const response = await fetch("http://localhost:5001/api/todos");
+        if (!response.ok)
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        const todosData = await response.json();
+        setTodos(todosData);
+      } catch (err) {
+        console.error("Error fetching todos:", err.message);
+      }
+    };
+
+    const fetchNotes = async () => {
+      try {
+        const response = await fetch(
+          `http://localhost:5001/api/notes/${clerkUserId}`
+        );
+        if (!response.ok)
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        const notesData = await response.json();
+        setNotes(notesData);
+      } catch (err) {
+        console.error("Error fetching notes:", err.message);
+      }
+    };
+
+    const fetchProgress = async () => {
+      try {
+        const response = await fetch(
+          `http://localhost:5001/api/progress/${clerkUserId}`
+        );
+        if (!response.ok)
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        const progressData = await response.json();
+        setProgress(progressData);
+      } catch (err) {
+        console.error("Error fetching progress:", err.message);
+      }
+    };
+
     fetchDocuments();
+    fetchTodos();
+    fetchNotes();
+    fetchProgress();
 
     const randomIndex = Math.floor(Math.random() * affirmations.length);
     setAffirmation(affirmations[randomIndex]);
-  }, []);
+  }, [clerkUserId]);
+
+  // Calculate study progress whenever relevant data changes
+  useEffect(() => {
+    const calculateStudyProgress = () => {
+      const documentWeight = 2;
+      const completedTodoWeight = 5;
+      const noteWeight = 3;
+      const pomodoroWeight = 4;
+      const eventWeight = 2;
+
+      const documentContribution = progress.documents * documentWeight;
+      const completedTodos = todos.filter((todo) => todo.isCompleted).length;
+      const todoContribution = completedTodos * completedTodoWeight;
+      const noteContribution = progress.notes * noteWeight;
+      const pomodoroContribution = progress.completedPomodoros * pomodoroWeight;
+      const eventContribution = progress.events * eventWeight;
+
+      const totalProgress = Math.min(
+        100,
+        documentContribution +
+          todoContribution +
+          noteContribution +
+          pomodoroContribution +
+          eventContribution
+      );
+
+      setStudyProgress(Math.round(totalProgress));
+
+      updateProgressInDatabase({
+        documents: recentUploads.length,
+        completedTodos,
+        notes: notes.length,
+        completedPomodoros: progress.completedPomodoros,
+        events: progress.events,
+      });
+    };
+
+    const updateProgressInDatabase = async (metrics) => {
+      try {
+        await fetch(`http://localhost:5001/api/progress/${clerkUserId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(metrics),
+        });
+      } catch (err) {
+        console.error("Error updating progress in database:", err.message);
+      }
+    };
+
+    if (clerkUserId) calculateStudyProgress();
+  }, [
+    recentUploads,
+    todos,
+    notes,
+    progress.completedPomodoros,
+    progress.events,
+    clerkUserId,
+  ]);
 
   const handleUploadRedirect = () => navigate("/upload-documents");
   const handleAiAppRedirect = () => navigate("/ai");
@@ -128,9 +238,15 @@ const Dashboard = () => {
     }
   };
 
+  const handlePomodoroComplete = () => {
+    setProgress((prev) => ({
+      ...prev,
+      completedPomodoros: prev.completedPomodoros + 1,
+    }));
+  };
+
   return (
     <div className="dashboard-page">
-      {/* Affirmation Header */}
       <header className="dashboard-header">
         <div className="affirmation-banner">
           <p className="affirmation-text">“{affirmation}”</p>
@@ -138,9 +254,7 @@ const Dashboard = () => {
       </header>
 
       <div className="dashboard-container">
-        {/* Sidebar */}
         <aside className="dashboard-sidebar">
-          {/* Recent Uploads */}
           <div className="dashboard-card uploads-card">
             <h2 className="card-title">Recent Uploads</h2>
             {recentUploads.length > 0 ? (
@@ -176,7 +290,6 @@ const Dashboard = () => {
             </button>
           </div>
 
-          {/* AI Doubt Solver Section */}
           <div className="dashboard-card ai-tools-card">
             <h2 className="card-title">Chat with AI Doubt Solver</h2>
             <p className="ai-tools-text">
@@ -187,11 +300,10 @@ const Dashboard = () => {
               className="action-button ai-tools-button"
               onClick={handleAiAppRedirect}
             >
-              <FaScrewdriver className="ai-tools-icon" /> Try StudyHelper
+              <FaSatellite className="ai-tools-icon" /> Try StudyHelper
             </button>
           </div>
 
-          {/* To-Do List */}
           <div className="dashboard-card todo-card" id="todo-section">
             <h2 className="card-title">To-Do List</h2>
             <div className="todo-input">
@@ -240,48 +352,50 @@ const Dashboard = () => {
           </div>
         </aside>
 
-        {/* Main Content */}
         <main className="dashboard-main">
-          {/* Study Progress and Timer */}
           <div className="progress-and-calendar-container">
-            {/* Study Progress */}
             <div className="dashboard-card progress-card">
               <h2 className="card-title">Study Progress</h2>
-              <div className="progress-circle">
+              <div className="progress-circle-container">
                 <svg className="progress-ring" width="120" height="120">
                   <circle
                     className="progress-ring__background"
                     cx="60"
                     cy="60"
-                    r="54"
-                    strokeWidth="12"
+                    r="50"
+                    strokeWidth="10"
                   />
                   <circle
                     className="progress-ring__fill"
                     cx="60"
                     cy="60"
-                    r="54"
-                    strokeWidth="12"
-                    strokeDasharray="339.292"
-                    strokeDashoffset={
-                      339.292 * (1 - studyProgress.completed / 100)
-                    }
+                    r="50"
+                    strokeWidth="10"
+                    strokeDasharray="314"
+                    strokeDashoffset={314 * (1 - studyProgress / 100)}
                   />
                 </svg>
-                <span className="progress-percentage">
-                  {studyProgress.completed}%
-                </span>
+                <span className="progress-percentage">{studyProgress}%</span>
               </div>
               <p className="progress-text">
                 You’re making great progress—keep it up!
               </p>
             </div>
 
-            {/* Timer */}
-            <Timer />
+            <Timer onPomodoroComplete={handlePomodoroComplete} />
+
+            <div className="dashboard-card streak-card">
+              <h2 className="card-title">Study Streak</h2>
+              <div className="streak-display">
+                <span className="streak-value">{progress.streak}</span>
+                <span className="streak-text">days</span>
+              </div>
+              <p className="streak-text">
+                Keep the streak alive with daily activity!
+              </p>
+            </div>
           </div>
 
-          {/* AI Tools Section */}
           <div className="dashboard-card ai-tools-card">
             <h2 className="card-title">Enhance Your Learning</h2>
             <p className="ai-tools-text">
@@ -296,8 +410,11 @@ const Dashboard = () => {
             </button>
           </div>
 
-          {/* Calendar Section */}
-          <CalendarSection />
+          <CalendarSection
+            onEventAdded={() =>
+              setProgress((prev) => ({ ...prev, events: prev.events + 1 }))
+            }
+          />
         </main>
       </div>
     </div>
